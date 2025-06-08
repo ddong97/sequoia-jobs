@@ -12,7 +12,12 @@ export async function GET(req: Request) {
   // ── build Supabase query ───────────────────────────────────────────
   let query = supabase
     .from("jobs")
-    .select("*")
+    .select(
+  `
+    id, title, location, role_family, remote, apply_url, scraped_at,
+    companies ( id, name, logo_url )
+  `
+  )
     .order("scraped_at", { ascending: false })   // newest first
     .limit(300);                                 // crude pagination
 

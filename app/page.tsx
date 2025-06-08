@@ -3,6 +3,7 @@
 
 import { useState, useMemo } from "react";
 import useSWR from "swr";
+import JobCard from "@/components/JobCard";
 
 const fetcher = (u: string) => fetch(u).then(r => r.json());
 
@@ -27,9 +28,8 @@ export default function Home() {
   /* ──────────────────  render UI  ───────────────────────────── */
   return (
     <main className="max-w-4xl mx-auto p-6 space-y-4">
-      {/* Filters */}
+      {/* ────────────── Filters ────────────── */}
       <div className="flex flex-wrap gap-3 items-center">
-        {/* search box */}
         <input
           className="border rounded p-2 flex-1 min-w-[180px]"
           placeholder="Search title or location…"
@@ -37,7 +37,6 @@ export default function Home() {
           onChange={e => setQ(e.target.value)}
         />
 
-        {/* role dropdown */}
         <select
           className="border rounded p-2"
           value={role}
@@ -50,7 +49,6 @@ export default function Home() {
           <option value="sales">Sales</option>
         </select>
 
-        {/* remote checkbox */}
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -61,27 +59,14 @@ export default function Home() {
         </label>
       </div>
 
-      {/* results */}
+      {/* ────────────── Results ────────────── */}
       {!data ? (
         <p>Loading…</p>
       ) : data.length === 0 ? (
         <p>No jobs match these filters.</p>
       ) : (
-        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-        data.map((j: any) => (
-          <a
-            key={j.id}
-            href={j.apply_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block border rounded p-4 hover:bg-gray-50"
-          >
-            <h2 className="font-semibold">{j.title}</h2>
-            <p className="text-sm text-gray-600">
-              {j.location} • {j.role_family}
-              {j.remote && " • Remote"}
-            </p>
-          </a>
+        data.map((job: any) => (
+          <JobCard key={job.id} job={job} />
         ))
       )}
     </main>
