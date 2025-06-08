@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/JobCard.tsx
+
 import React from 'react';
 
 export default function JobCard({ job }: { job: any }) {
