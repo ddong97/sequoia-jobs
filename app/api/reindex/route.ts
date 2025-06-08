@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { crawlGreenhouse } from "@/scripts/crawlGreenhouse";  // your crawler helper
+import crawlGreenhouse from "@/scripts/crawlGreenhouse";   // default import
 
-// Ensure Node.js runtime on Vercel so fetch works
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    await crawlGreenhouse();        // run crawler, upsert jobs
+    await crawlGreenhouse();      // run crawler
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error(err);

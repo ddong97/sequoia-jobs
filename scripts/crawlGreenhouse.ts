@@ -4,17 +4,12 @@ dotenv.config({ path: ".env.local" });
 import fetch from "node-fetch";
 import { createClient } from "@supabase/supabase-js";
 
-// ───────────────────────────────────────────────────────────
-// Supabase client
-// ───────────────────────────────────────────────────────────
 const supa = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// ───────────────────────────────────────────────────────────
-// DEFAULT EXPORT  ← this is what /api/reindex will call
-// ───────────────────────────────────────────────────────────
+// ----- DEFAULT EXPORT -----
 export default async function crawlGreenhouse() {
   const { data } = await supa
     .from("companies")
@@ -32,9 +27,7 @@ export default async function crawlGreenhouse() {
   console.log("Done");
 }
 
-// ───────────────────────────────────────────────────────────
-// helper: fetch one org’s jobs and upsert
-// ───────────────────────────────────────────────────────────
+// helper to fetch and upsert one company’s jobs
 async function crawlOrg(company_id: number, org: string) {
   const res = await fetch(
     `https://boards-api.greenhouse.io/v1/boards/${org}/jobs`
