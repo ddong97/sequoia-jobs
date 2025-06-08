@@ -1,16 +1,46 @@
-import dotenv from 'dotenv';
-dotenv.config({ path: '.env.local' });
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+
 import fetch from "node-fetch";
 import { createClient } from "@supabase/supabase-js";
 
+// ───────────────────────────────────────────────────────────
+// Supabase client
+// ───────────────────────────────────────────────────────────
 const supa = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// ───────────────────────────────────────────────────────────
+// DEFAULT EXPORT  ← this is what /api/reindex will call
+// ───────────────────────────────────────────────────────────
+export default async function crawlGreenhouse() {
+  const { data } = await supa
+    .from("companies")
+    .select("id, ats_org")
+    .eq("ats", "greenhouse");
+
+  for (const c of data ?? []) {
+    try {
+      await crawlOrg(c.id, c.ats_org);
+      console.log("✓", c.ats_org);
+    } catch (err) {
+      console.error("✗", c.ats_org, (err as Error).message);
+    }
+  }
+  console.log("Done");
+}
+
+// ───────────────────────────────────────────────────────────
+// helper: fetch one org’s jobs and upsert
+// ───────────────────────────────────────────────────────────
 async function crawlOrg(company_id: number, org: string) {
-  const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${org}/jobs`);
+  const res = await fetch(
+    `https://boards-api.greenhouse.io/v1/boards/${org}/jobs`
+  );
   if (!res.ok) throw new Error(`HTTP ${res.status} ${org}`);
+
   const json: any = await res.json();
 
   const jobs = json.jobs.map((j: any) => ({
@@ -30,21 +60,3 @@ async function crawlOrg(company_id: number, org: string) {
   });
   if (error) console.error(error);
 }
-
-async function main() {
-  const { data } = await supa
-    .from("companies")
-    .select("id, ats, ats_org")
-    .eq("ats", "greenhouse");
-
-  for (const c of data ?? []) {
-    try {
-      await crawlOrg(c.id, c.ats_org);
-      console.log("✓", c.ats_org);
-    } catch (e) {
-      console.error("✗", c.ats_org, (e as Error).message);
-    }
-  }
-  console.log("Done");
-}
-main();
