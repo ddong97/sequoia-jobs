@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { crawlGreenhouse } from "@/scripts/greenhouseCrawl";  // your crawler helper
+import { crawlGreenhouse } from "@/scripts/crawlGreenhouse";  // your crawler helper
 
 // Ensure Node.js runtime on Vercel so fetch works
 export const runtime = "nodejs";
