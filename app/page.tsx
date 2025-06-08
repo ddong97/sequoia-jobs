@@ -66,6 +66,7 @@ export default function Home() {
       ) : data.length === 0 ? (
         <p>No jobs match these filters.</p>
       ) : (
+        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
         data.map((j: any) => (
           <a
             key={j.id}
