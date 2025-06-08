@@ -4,42 +4,64 @@ import { NextResponse } from "next/server";
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
-  // ── read query-string values (empty string = “no filter”) ──────────
+  // ----- read filters -------------------------------------------------
   const q      = searchParams.get("q")    ?? "";
   const role   = searchParams.get("role") ?? "";
   const remote = searchParams.get("remote") === "true";
+  const cursor = searchParams.get("cursor");            // ts|id or null
 
-  // ── build Supabase query ───────────────────────────────────────────
-  let query = supabase
-    .from("jobs")
-    .select(
-  `
-    id, title, location, role_family, remote, apply_url, scraped_at,
-    companies ( id, name, logo_url )
-  `
-  )
-    .order("scraped_at", { ascending: false })   // newest first
-    .limit(300);                                 // crude pagination
+  const LIMIT  = 30;   // rows returned to client
+  const WINDOW = 50;   // raw rows scanned each loop
 
-  if (q) {
-    // Full-text search on the `fts` column we populated earlier
-    query = query.textSearch("fts", `${q}:*`, { type: "plain" });
+  const collected: any[] = [];
+  let currentCursor = cursor;
+  let keepGoing     = true;
+
+  while (collected.length < LIMIT && keepGoing) {
+    // ---- base query --------------------------------------------------
+    let qBuilder = supabase
+      .from("jobs")
+      .select(`
+        id, title, location, role_family, remote,
+        apply_url, scraped_at,
+        companies ( id, name, logo_url )
+      `)
+      .order("scraped_at", { ascending: false })
+      .order("id",         { ascending: false })
+      .limit(WINDOW + 1);
+
+    if (currentCursor) {
+      const [ts, id] = currentCursor.split("|");
+      qBuilder = qBuilder.or(
+        `scraped_at.lt.${ts},and(scraped_at.eq.${ts},id.lt.${id})`
+      );
+    }
+
+    const { data: raw, error } = await qBuilder;
+    if (error) {
+      console.error(error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // ---- JS-side filters --------------------------------------------
+    const filtered = raw.filter((row) =>
+      (q      ? row.fts?.includes(q) : true) &&
+      (role   ? row.role_family === role : true) &&
+      (remote ? row.remote : true)
+    );
+
+    collected.push(
+      ...filtered.slice(0, LIMIT - collected.length)
+    );
+
+    // ---- decide whether to loop again -------------------------------
+    keepGoing = raw.length > WINDOW;
+    if (keepGoing) {
+      const pivot = raw[WINDOW - 1];               // 50-th row
+      currentCursor = `${pivot.scraped_at}|${pivot.id}`;
+    }
   }
 
-  if (role) {
-    query = query.eq("role_family", role);
-  }
-
-  if (remote) {
-    query = query.eq("remote", true);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error(error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data);
+  const nextCursor = keepGoing ? currentCursor : null;
+  return NextResponse.json({ jobs: collected, nextCursor });
 }
